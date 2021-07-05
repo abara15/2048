@@ -1,7 +1,7 @@
 import cloneDeep from 'lodash.clonedeep';
 import { addNumber } from './util';
 
-export const swipeLeft = (data, setData) => {
+export const swipeLeft = (data, setData, dummy) => {
   let oldGrid = data;
   let newArray = cloneDeep(data);
 
@@ -41,10 +41,14 @@ export const swipeLeft = (data, setData) => {
     addNumber(newArray);
   }
 
-  setData(newArray);
+  if (dummy) {
+    return newArray;
+  } else {
+    setData(newArray);
+  }
 }
 
-export const swipeRight = (data, setData) => {
+export const swipeRight = (data, setData, dummy) => {
   let oldData = data;
   let newArray = cloneDeep(data);
 
@@ -83,10 +87,14 @@ export const swipeRight = (data, setData) => {
     addNumber(newArray);
   }
 
-  setData(newArray);
+  if (dummy) {
+    return newArray;
+  } else {
+    setData(newArray);
+  }
 }
 
-export const swipeUp = (data, setData) => {
+export const swipeUp = (data, setData, dummy) => {
   let b = [...data];
   let oldData = JSON.parse(JSON.stringify(data));
   for (let i = 0; i < 4; i++) {
@@ -123,10 +131,14 @@ export const swipeUp = (data, setData) => {
     addNumber(b);
   }
 
-  setData(b);
+  if (dummy) {
+    return b;
+  } else {
+    setData(b);
+  }
 }
 
-export const swipeDown = (data, setData) => {
+export const swipeDown = (data, setData, dummy) => {
   console.log(data);
   let b = [...data];
   let oldData = JSON.parse(JSON.stringify(data));
@@ -165,5 +177,9 @@ export const swipeDown = (data, setData) => {
     addNumber(b);
   }
 
-  setData(b);
+  if (dummy) {
+    return b;
+  } else {
+    setData(b);
+  }
 }

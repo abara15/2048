@@ -1,4 +1,5 @@
 import { useEffect } from "react"
+import { swipeDown, swipeLeft, swipeRight, swipeUp } from "./movements";
 
 export const useEvent = (event, handler, passive = false) => {
     useEffect(() => {
@@ -61,4 +62,29 @@ export const getColors = (number) => {
     default:
       return "#C2B3A3";
   }
+}
+
+// Check GameOver
+export const checkGameOver = (data, setData) => {
+  let checkLeft = swipeLeft(data, setData, true);
+  if (JSON.stringify(data) !== JSON.stringify(checkLeft)) {
+    return false;
+  }
+
+  let checkRight = swipeRight(data, setData, true);
+  if (JSON.stringify(data) !== JSON.stringify(checkRight)) {
+    return false;
+  }
+
+  let checkUp = swipeUp(data, setData, true);
+  if (JSON.stringify(data) !== JSON.stringify(checkUp)) {
+    return false;
+  }
+
+  let checkDown = swipeDown(data, setData, true);
+  if (JSON.stringify(data) !== JSON.stringify(checkDown)) {
+    return false;
+  }
+
+  return true;
 }

@@ -1,7 +1,7 @@
 import './App.css';
 import { useEffect, useState } from 'react';
 import cloneDeep from 'lodash.clonedeep';
-import { useEvent, addNumber, getColors } from './util';
+import { useEvent, addNumber, getColors, checkGameOver } from './util';
 import { swipeDown, swipeLeft, swipeRight, swipeUp } from './movements';
 
 function App() {
@@ -18,6 +18,8 @@ function App() {
 		[0, 0, 0, 0],
 	]);
 
+  const [gameOver, setGameOver] = useState(false);
+
   // initialize
   const initialize = () => {
     let newGrid = cloneDeep(data);
@@ -29,13 +31,16 @@ function App() {
     console.table(newGrid);
     setData(newGrid);
   }
-
-  // Check GameOver
+  
 
   // Reset
   
   // HANDLE KEY DOWN
   const handleKeyDown = (event) => {
+    if (gameOver) {
+      return;
+    }
+
     switch (event.keyCode) {
       case UP_ARROW:
         swipeUp(data, setData);
@@ -55,6 +60,12 @@ function App() {
 
       default:
         break;
+    }
+
+    let gameOverr = checkGameOver(data, setData);
+    if (gameOverr) {
+      alert("Game over");
+      setGameOver(true);
     }
   }
 
