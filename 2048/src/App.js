@@ -90,9 +90,10 @@ const Block = ({number}) => {
       style={{
         ...blockStyle,
         background: getColors(number),
+        color: number === 2 || number === 4 ? "#605B53" : "white",
       }}
     >
-      {number}
+      {number !== 0 ? number : ""}
     </div>
   );
 }
@@ -116,7 +117,7 @@ const style = {
     alignItems: "center",
     fontSize: 45,
     fontWeight: 500,
-    color: "#605B53",
+    color: "white",
   },
 }
 
