@@ -34,6 +34,19 @@ function App() {
   
 
   // Reset
+  const resetGame = () => {
+    const initialGrid = [
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+
+    addNumber(initialGrid);
+    addNumber(initialGrid);
+    setData(initialGrid);
+    setGameOver(false);
+  }
   
   // HANDLE KEY DOWN
   const handleKeyDown = (event) => {
@@ -78,19 +91,28 @@ function App() {
 
 
 	return (
-		<div
-      style={style.main}
-    >
-      {data.map((row, index) => {
-        return (
-          <div style={{ display: 'flex' }} key={index}>
-            {row.map((digit, i) => (
-              <Block number={digit} key={i} />
-            ))}
-          </div>
-        );
-      })}
-		</div>
+    <>
+      <div
+        style={style.main}
+      >
+        {data.map((row, index) => {
+          return (
+            <div style={{ display: 'flex' }} key={index}>
+              {row.map((digit, i) => (
+                <Block number={digit} key={i} />
+              ))}
+            </div>
+          );
+        })}
+      </div>
+      {gameOver && <div>GAME OVER</div>}
+      <div
+        onClick={resetGame}
+        style={style.button}
+      >
+        New Game
+      </div>
+    </>
 	);
 }
 
@@ -129,6 +151,14 @@ const style = {
     fontSize: 45,
     fontWeight: 500,
     color: "white",
+  },
+  button: {
+    background: "#AD9D8F",
+    width: "max-content",
+    margin: "auto",
+    padding: 5,
+    borderRadius: 5,
+    marginTop: 10,
   },
 }
 
