@@ -38,27 +38,27 @@ export const getColors = (number) => {
     case 2:
       return "#FF2A6D";
     case 4:
-      return "#005678";
+      return "#520091";
     case 8:
-      return "#FF00A0";
+      return "#1afe49";
     case 16:
-      return "#DEFE47";
+      return "#03304e";
     case 32:
-      return "#FF6E27";
+      return "#fd7d74";
     case 64:
-      return "#1AFE49";
+      return "#e1408b";
     case 128:
       return "#0016EE";
     case 256:
-      return "#E8C350";
+      return "#2a0040";
     case 512:
-      return "#E8BE40";
+      return "#d8c51a";
     case 1024:
-      return "#E8BB31";
+      return "#f2025b";
     case 2048:
-      return "#E7B723";
+      return "#7400e6";
     default:
-      return "#321450";
+      return "#150103";
   }
 }
 

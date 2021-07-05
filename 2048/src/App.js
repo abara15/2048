@@ -1,8 +1,9 @@
 import './App.css';
 import { useEffect, useState } from 'react';
 import cloneDeep from 'lodash.clonedeep';
+import GlitchText from 'react-glitch-effect/core/GlitchText';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faGamepad, faRedo } from '@fortawesome/free-solid-svg-icons';
+import { faRedo } from '@fortawesome/free-solid-svg-icons';
 import { useEvent, addNumber, getColors, checkGameOver } from './util';
 import { swipeDown, swipeLeft, swipeRight, swipeUp } from './movements';
 import background from "./img/3160.jpg"
@@ -95,30 +96,73 @@ function App() {
 
 
 	return (
-    <div
-      style={style.body}
-    >
-      <div
-        style={style.main}
+    <div style={style.body}>
+      <GlitchText
+        style={style.title}
+        disabled={false} 
+        color1='rgba(5, 217, 232, 1)'
+        color2='rgba(255, 42, 109, 1)'
+        iterationCount='infinite'
+        onHover={false}
       >
-        {data.map((row, index) => {
-          return (
-            <div style={{ display: 'flex' }} key={index}>
-              {row.map((digit, i) => (
-                <Block number={digit} key={i} />
-              ))}
-            </div>
-          );
-        })}
+        2048
+      </GlitchText>
+
+      <div style={style.flexContainer}>
+        <div style={style.scoreContainer}>
+          <div style={style.scoreItem}>
+            <span>Score</span>
+            <span style={style.score}>0</span>
+          </div>
+          <div style={style.scoreItem}>
+            <span>Best</span>
+            <span style={style.score}>0</span>
+          </div>
+        </div>
+        <div style={style.main}>
+          {data.map((row, index) => {
+            return (
+              <div style={{ display: 'flex' }} key={index}>
+                {row.map((digit, i) => (
+                  <Block number={digit} key={i} />
+                ))}
+              </div>
+            );
+          })}
+        </div>
+        {gameOver && <div>GAME OVER</div>}
+        <div
+          onClick={resetGame}
+          style={style.button}
+        >
+          <FontAwesomeIcon icon={faRedo} />
+        </div>
       </div>
-      {gameOver && <div>GAME OVER</div>}
-      <div
-        onClick={resetGame}
-        style={style.button}
-      >
-        <FontAwesomeIcon icon={faRedo} />
-        <span>New Game</span>
-        <FontAwesomeIcon icon={faGamepad} />
+      <div style={style.footer}>
+        <p
+          style={{
+            fontSize: 20,
+            fontFamily: 'Monument'
+          }}
+        >
+          Made by <a 
+          href="https://abara15.github.io" 
+          style={{
+            color: "#05D9E8",
+            textDecoration: 'none',
+          }}
+          >
+            Anthony Barakat
+          </a>
+        </p>
+        <a
+          href="https://www.freepik.com/vectors/business"
+          style={{
+            fontSize: 12,
+          }}
+        >
+          Business vector created by vectorpocket - www.freepik.com
+        </a>
       </div>
     </div>
 	);
@@ -131,7 +175,7 @@ const Block = ({number}) => {
       style={{
         ...blockStyle,
         background: getColors(number),
-        color: number === 2 || number === 4 ? "white" : "white",
+        // color: number === 2 || number === 4 ? "white" : "white",
       }}
     >
       {number !== 0 ? number : ""}
@@ -146,11 +190,6 @@ const style = {
     backgroundSize: "cover",
     backgroundRepeat: "no-repeat",
     backgroundAttachment: "fixed",
-    backgroundColor: "#111111",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
     position: "fixed",
     padding: 0,
     margin: 0,
@@ -159,6 +198,41 @@ const style = {
     width: "100%",
     height: "100%",
     userSelect: "none",
+  },
+  title: {
+    fontFamily: 'Monument',
+    fontSize: 150,
+    color: 'white',
+    padding: '30px 0px',
+    textAlign: 'center',
+  },
+  flexContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+  },
+  scoreContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  scoreItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    backgroundColor: '#05D9E8',
+    fontFamily: 'Monument',
+    fontSize: 12,
+    color: '#111111',
+    margin: 10,
+    padding: '10px 50px',
+    borderRadius: 5,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  score: {
+    fontFamily: 'Monument',
+    fontSize: 30,
   },
   main: {
     background: "#05D9E8",
@@ -169,29 +243,38 @@ const style = {
     marginTop: 10,
   },
   block: {
-    height: 100,
-    width: 100,
+    height: "2.5em",
+    width: "2.5em",
     background: "#321450",
     margin: 3,
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    fontSize: 50,
+    fontFamily: "Monument",
+    fontSize: 30,
     fontWeight: 500,
     color: "white",
   },
   button: {
     cursor: "pointer",
-    background: "#AD9D8F",
+    backgroundColor: '#05D9E8',
     width: "max-content",
+    fontSize: 30,
     margin: "auto",
-    padding: 5,
+    padding: 10,
     borderRadius: 5,
-    border: "1px solid #FFFFFF",
-    marginTop: 10,
-    // display: "flex",
-    // flexDirection: "row",
-    // justifyContent: "space-between",
+    marginTop: 20,
+  },
+  buttonHover: {
+    color: 'red,'
+  },
+  footer: {
+    width: '100%',
+    position: 'fixed',
+    bottom: 0,
+    left: 0,
+    textAlign: 'center',
+    color: 'white',
   },
 }
 
