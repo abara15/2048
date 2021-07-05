@@ -1,8 +1,11 @@
 import './App.css';
 import { useEffect, useState } from 'react';
 import cloneDeep from 'lodash.clonedeep';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faGamepad, faRedo } from '@fortawesome/free-solid-svg-icons';
 import { useEvent, addNumber, getColors, checkGameOver } from './util';
 import { swipeDown, swipeLeft, swipeRight, swipeUp } from './movements';
+import background from "./img/3160.jpg"
 
 function App() {
 
@@ -75,10 +78,11 @@ function App() {
         break;
     }
 
-    let gameOverr = checkGameOver(data, setData);
-    if (gameOverr) {
+    let gameStatus = checkGameOver(data, setData);
+    if (gameStatus) {
       alert("Game over");
       setGameOver(true);
+      resetGame();
     }
   }
 
@@ -91,7 +95,9 @@ function App() {
 
 
 	return (
-    <>
+    <div
+      style={style.body}
+    >
       <div
         style={style.main}
       >
@@ -110,9 +116,11 @@ function App() {
         onClick={resetGame}
         style={style.button}
       >
-        New Game
+        <FontAwesomeIcon icon={faRedo} />
+        <span>New Game</span>
+        <FontAwesomeIcon icon={faGamepad} />
       </div>
-    </>
+    </div>
 	);
 }
 
@@ -123,7 +131,7 @@ const Block = ({number}) => {
       style={{
         ...blockStyle,
         background: getColors(number),
-        color: number === 2 || number === 4 ? "#605B53" : "white",
+        color: number === 2 || number === 4 ? "white" : "white",
       }}
     >
       {number !== 0 ? number : ""}
@@ -132,8 +140,28 @@ const Block = ({number}) => {
 }
 
 const style = {
+  body: {
+    backgroundImage: `url(${background})`,
+    backgroundPosition: "center center",
+    backgroundSize: "cover",
+    backgroundRepeat: "no-repeat",
+    backgroundAttachment: "fixed",
+    backgroundColor: "#111111",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "fixed",
+    padding: 0,
+    margin: 0,
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    userSelect: "none",
+  },
   main: {
-    background: "#AD9D8F",
+    background: "#05D9E8",
     width: "max-content",
     margin: "auto",
     padding: 5,
@@ -141,24 +169,29 @@ const style = {
     marginTop: 10,
   },
   block: {
-    height: 80,
-    width: 80,
-    background: "lightgray",
+    height: 100,
+    width: 100,
+    background: "#321450",
     margin: 3,
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    fontSize: 45,
+    fontSize: 50,
     fontWeight: 500,
     color: "white",
   },
   button: {
+    cursor: "pointer",
     background: "#AD9D8F",
     width: "max-content",
     margin: "auto",
     padding: 5,
     borderRadius: 5,
+    border: "1px solid #FFFFFF",
     marginTop: 10,
+    // display: "flex",
+    // flexDirection: "row",
+    // justifyContent: "space-between",
   },
 }
 

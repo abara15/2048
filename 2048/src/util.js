@@ -17,7 +17,6 @@ export const useEvent = (event, handler, passive = false) => {
 export const addNumber = (newGrid) => {
   let added = false;
   let gridFull = false;
-  let attempts = 0;
   while (!added) {
     if (gridFull) {
       break;
@@ -27,7 +26,6 @@ export const addNumber = (newGrid) => {
     let rand1 = Math.floor(Math.random() * 4);
     let rand2 = Math.floor(Math.random() * 4);
     // Increment attempts
-    attempts++;
     if (newGrid[rand1][rand2] === 0) {
       newGrid[rand1][rand2] = Math.random() > 0.5 ? 2 : 4;
       added = true;
@@ -38,19 +36,19 @@ export const addNumber = (newGrid) => {
 export const getColors = (number) => {
   switch (number) {
     case 2:
-      return "#EBDCD0";
+      return "#FF2A6D";
     case 4:
-      return "#E9DBBA";
+      return "#005678";
     case 8:
-      return "#E9A067";
+      return "#FF00A0";
     case 16:
-      return "#F08151";
+      return "#DEFE47";
     case 32:
-      return "#F2654F";
+      return "#FF6E27";
     case 64:
-      return "#F1462C";
+      return "#1AFE49";
     case 128:
-      return "#E7C65E";
+      return "#0016EE";
     case 256:
       return "#E8C350";
     case 512:
@@ -60,7 +58,7 @@ export const getColors = (number) => {
     case 2048:
       return "#E7B723";
     default:
-      return "#C2B3A3";
+      return "#321450";
   }
 }
 
