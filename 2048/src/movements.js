@@ -160,7 +160,6 @@ export const swipeDown = (data, setData, score, setScore, dummy) => {
         b[slow][i] = b[fast][i];
         b[fast][i] = 0;
         fast--;
-        score = score + b[slow][i];
       } else if (b[slow][i] !== 0 && b[fast][i] === 0) {
         fast--;
       } else if (b[slow][i] !== 0 && b[fast][i] !== 0) {

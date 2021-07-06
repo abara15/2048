@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 import cloneDeep from 'lodash.clonedeep';
 import GlitchText from 'react-glitch-effect/core/GlitchText';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRedo } from '@fortawesome/free-solid-svg-icons';
+import { faRedo, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import Popup from 'reactjs-popup';
+import 'reactjs-popup/dist/index.css';
 import { useEvent, addNumber, getColors, checkGameOver } from './util';
 import { swipeDown, swipeLeft, swipeRight, swipeUp } from './movements';
 import background from "./img/3160.jpg"
@@ -179,14 +181,16 @@ function App() {
             Anthony Barakat
           </a>
         </p>
-        <a
-          href="https://www.freepik.com/vectors/business"
-          style={{
-            fontSize: 12,
-          }}
-        >
-          Business vector created by vectorpocket - www.freepik.com
-        </a>
+        <Popup trigger={<FontAwesomeIcon icon={faInfoCircle}  />} position="right center">
+          <a
+            href="https://www.freepik.com/vectors/business"
+            style={{
+              fontSize: 12,
+            }}
+          >
+            Business vector created by vectorpocket - www.freepik.com
+          </a>
+        </Popup>
       </div>
     </div>
 	);
@@ -293,6 +297,10 @@ const style = {
     color: 'red,'
   },
   footer: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     width: '100%',
     position: 'fixed',
     bottom: 0,
