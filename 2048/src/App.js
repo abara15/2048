@@ -10,6 +10,7 @@ import background from "./img/3160.jpg"
 
 function App() {
 
+  // Key codes for arrows pressed
   const UP_ARROW = 38;
   const DOWN_ARROW = 40;
   const LEFT_ARROW = 37;
@@ -23,22 +24,12 @@ function App() {
 	]);
 
   const [gameOver, setGameOver] = useState(false);
-
-  // initialize
-  const initialize = () => {
-    let newGrid = cloneDeep(data);
-    console.log(newGrid);
-
-    addNumber(newGrid);
-    console.table(newGrid);
-    addNumber(newGrid);
-    console.table(newGrid);
-    setData(newGrid);
-  }
+  const [score, setScore] = useState(0);
   
 
   // Reset
   const resetGame = () => {
+    // Create a new grid filled with our initial 0s
     const initialGrid = [
       [0, 0, 0, 0],
       [0, 0, 0, 0],
@@ -46,41 +37,60 @@ function App() {
       [0, 0, 0, 0],
     ];
 
+    // Add either a 2 or a 4 to the grid, twice
     addNumber(initialGrid);
     addNumber(initialGrid);
+
+    // Set our data as our new grid with the inserted numbers
     setData(initialGrid);
+
+    // Our game isn't over anymore, so set gameOver to false
     setGameOver(false);
   }
   
-  // HANDLE KEY DOWN
+
+  // Handle key presses
   const handleKeyDown = (event) => {
+    // Doesn't allow key presses if our gameOver status is true
     if (gameOver) {
       return;
     }
 
+    // Will swipe the grid up/down/left/right depending on key pressed
     switch (event.keyCode) {
       case UP_ARROW:
-        swipeUp(data, setData);
+        swipeUp(data, setData, score, setScore);
         break;
 
       case DOWN_ARROW:
-        swipeDown(data, setData);
+        swipeDown(data, setData, score, setScore);
         break;
 
       case LEFT_ARROW:
-        swipeLeft(data, setData);
+        swipeLeft(data, setData, score, setScore);
         break;
 
       case RIGHT_ARROW:
-        swipeRight(data, setData);
+        swipeRight(data, setData, score, setScore);
         break;
 
       default:
         break;
     }
 
-    let gameStatus = checkGameOver(data, setData);
+    // let highScore = localStorage.getItem("highscore");
+    // if (highScore !== null) {
+    //   if (score > highScore) {
+    //     localStorage.setItem("highscore", score);
+    //   }
+    // } else {
+    //   localStorage.setItem("highscore", score);
+    // }
+
+    // Check if game is over
+    let gameStatus = checkGameOver(data, setData, score, setScore);
     if (gameStatus) {
+      // Status is true, so give an alert, set gameOver status as true, and reset game
       alert("Game over");
       setGameOver(true);
       resetGame();
@@ -88,10 +98,24 @@ function App() {
   }
 
 
+  // Initializes our starting board
   useEffect(() => {
-    initialize();
+    // Clones our const data set
+    let newGrid = cloneDeep(data);
+    console.log(newGrid);
+
+    // Add either a 2 or a 4 to the grid, twice
+    addNumber(newGrid);
+    console.table(newGrid);
+    addNumber(newGrid);
+    console.table(newGrid);
+
+    // Set our data as our new grid with the inserted numbers
+    setData(newGrid);
   }, []);
 
+
+  // Calls the handleKeyDown function whenever a keydown event occurs
   useEvent('keydown', handleKeyDown);
 
 
@@ -112,11 +136,11 @@ function App() {
         <div style={style.scoreContainer}>
           <div style={style.scoreItem}>
             <span>Score</span>
-            <span style={style.score}>0</span>
+            <span style={style.score}>{score}</span>
           </div>
           <div style={style.scoreItem}>
             <span>Best</span>
-            <span style={style.score}>0</span>
+            <span style={style.score}>{score}</span>
           </div>
         </div>
         <div style={style.main}>
@@ -130,12 +154,12 @@ function App() {
             );
           })}
         </div>
-        {gameOver && <div>GAME OVER</div>}
+        {gameOver}
         <div
           onClick={resetGame}
           style={style.button}
         >
-          <FontAwesomeIcon icon={faRedo} />
+          <FontAwesomeIcon icon={faRedo}  />
         </div>
       </div>
       <div style={style.footer}>

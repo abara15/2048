@@ -1,7 +1,7 @@
 import cloneDeep from 'lodash.clonedeep';
 import { addNumber } from './util';
 
-export const swipeLeft = (data, setData, dummy) => {
+export const swipeLeft = (data, setData, score, setScore, dummy) => {
   let oldGrid = data;
   let newArray = cloneDeep(data);
 
@@ -45,10 +45,11 @@ export const swipeLeft = (data, setData, dummy) => {
     return newArray;
   } else {
     setData(newArray);
+    setScore(score);
   }
 }
 
-export const swipeRight = (data, setData, dummy) => {
+export const swipeRight = (data, setData, score, setScore, dummy) => {
   let oldData = data;
   let newArray = cloneDeep(data);
 
@@ -91,10 +92,11 @@ export const swipeRight = (data, setData, dummy) => {
     return newArray;
   } else {
     setData(newArray);
+    setScore(score);
   }
 }
 
-export const swipeUp = (data, setData, dummy) => {
+export const swipeUp = (data, setData, score, setScore, dummy) => {
   let b = [...data];
   let oldData = JSON.parse(JSON.stringify(data));
   for (let i = 0; i < 4; i++) {
@@ -135,10 +137,11 @@ export const swipeUp = (data, setData, dummy) => {
     return b;
   } else {
     setData(b);
+    setScore(score);
   }
 }
 
-export const swipeDown = (data, setData, dummy) => {
+export const swipeDown = (data, setData, score, setScore, dummy) => {
   console.log(data);
   let b = [...data];
   let oldData = JSON.parse(JSON.stringify(data));
@@ -157,6 +160,7 @@ export const swipeDown = (data, setData, dummy) => {
         b[slow][i] = b[fast][i];
         b[fast][i] = 0;
         fast--;
+        score = score + b[slow][i];
       } else if (b[slow][i] !== 0 && b[fast][i] === 0) {
         fast--;
       } else if (b[slow][i] !== 0 && b[fast][i] !== 0) {
@@ -181,5 +185,6 @@ export const swipeDown = (data, setData, dummy) => {
     return b;
   } else {
     setData(b);
+    setScore(score);
   }
 }
