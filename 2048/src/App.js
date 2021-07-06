@@ -278,6 +278,7 @@ const style = {
     fontSize: 30,
     fontWeight: 500,
     color: "white",
+    transition: "0.3s",
   },
   button: {
     cursor: "pointer",
