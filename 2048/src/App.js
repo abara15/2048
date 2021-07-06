@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faRedo, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 import Popup from 'reactjs-popup';
 import 'reactjs-popup/dist/index.css';
-import { useEvent, addNumber, getColors, checkGameOver } from './util';
+import { useEvent, addNumber, getColors, checkGameOver, handleHighScore, CURRENT_HIGH_SCORE } from './util';
 import { swipeDown, swipeLeft, swipeRight, swipeUp } from './movements';
 import background from "./img/3160.jpg"
 
@@ -28,6 +28,8 @@ function App() {
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   
+  const [highScore, setHighScore] = useState(CURRENT_HIGH_SCORE);
+  
 
   // Reset
   const resetGame = () => {
@@ -48,6 +50,7 @@ function App() {
 
     // Our game isn't over anymore, so set gameOver to false
     setGameOver(false);
+    setScore(0);
   }
   
 
@@ -61,36 +64,29 @@ function App() {
     // Will swipe the grid up/down/left/right depending on key pressed
     switch (event.keyCode) {
       case UP_ARROW:
-        swipeUp(data, setData, score, setScore);
+        swipeUp(data, setData, score, setScore, setHighScore);
         break;
 
       case DOWN_ARROW:
-        swipeDown(data, setData, score, setScore);
+        swipeDown(data, setData, score, setScore, setHighScore);
         break;
 
       case LEFT_ARROW:
-        swipeLeft(data, setData, score, setScore);
+        swipeLeft(data, setData, score, setScore, setHighScore);
         break;
 
       case RIGHT_ARROW:
-        swipeRight(data, setData, score, setScore);
+        swipeRight(data, setData, score, setScore, setHighScore);
         break;
 
       default:
         break;
     }
 
-    // let highScore = localStorage.getItem("highscore");
-    // if (highScore !== null) {
-    //   if (score > highScore) {
-    //     localStorage.setItem("highscore", score);
-    //   }
-    // } else {
-    //   localStorage.setItem("highscore", score);
-    // }
+    handleHighScore(score, setHighScore);
 
     // Check if game is over
-    let gameStatus = checkGameOver(data, setData, score, setScore);
+    let gameStatus = checkGameOver(data, setData, score, setScore, setHighScore);
     if (gameStatus) {
       // Status is true, so give an alert, set gameOver status as true, and reset game
       alert("Game over");
@@ -142,7 +138,7 @@ function App() {
           </div>
           <div style={style.scoreItem}>
             <span>Best</span>
-            <span style={style.score}>{score}</span>
+            <span style={style.score}>{highScore}</span>
           </div>
         </div>
         <div style={style.main}>

@@ -63,26 +63,48 @@ export const getColors = (number) => {
 }
 
 // Check GameOver
-export const checkGameOver = (data, setData, score, setScore) => {
-  let checkLeft = swipeLeft(data, setData, score, setScore, true);
+export const checkGameOver = (data, setData, score, setScore, setHighScore) => {
+  let checkLeft = swipeLeft(data, setData, score, setScore, setHighScore, true);
   if (JSON.stringify(data) !== JSON.stringify(checkLeft)) {
     return false;
   }
 
-  let checkRight = swipeRight(data, setData, score, setScore, true);
+  let checkRight = swipeRight(data, setData, score, setScore, setHighScore, true);
   if (JSON.stringify(data) !== JSON.stringify(checkRight)) {
     return false;
   }
 
-  let checkUp = swipeUp(data, setData, score, setScore, true);
+  let checkUp = swipeUp(data, setData, score, setScore, setHighScore, true);
   if (JSON.stringify(data) !== JSON.stringify(checkUp)) {
     return false;
   }
 
-  let checkDown = swipeDown(data, setData, score, setScore, true);
+  let checkDown = swipeDown(data, setData, score, setScore, setHighScore, true);
   if (JSON.stringify(data) !== JSON.stringify(checkDown)) {
     return false;
   }
 
   return true;
+}
+
+export const CURRENT_HIGH_SCORE = () => {
+  if (localStorage.getItem("highscore") === null) {
+    return 0;
+  } else {
+    return localStorage.getItem("highscore");
+  }
+}
+
+export const handleHighScore = (score, setHighScore) => {
+  let highScore = localStorage.getItem("highscore");
+
+  if (highScore !== null) {
+    if (score > highScore) {
+      localStorage.setItem("highscore", score);
+      setHighScore(score);
+    }
+  } else {
+    localStorage.setItem("highscore", score);
+    setHighScore(score);
+  }
 }

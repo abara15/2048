@@ -1,7 +1,7 @@
 import cloneDeep from 'lodash.clonedeep';
-import { addNumber } from './util';
+import { addNumber, handleHighScore } from './util';
 
-export const swipeLeft = (data, setData, score, setScore, dummy) => {
+export const swipeLeft = (data, setData, score, setScore, setHighScore, dummy) => {
   let oldGrid = data;
   let newArray = cloneDeep(data);
 
@@ -47,10 +47,11 @@ export const swipeLeft = (data, setData, score, setScore, dummy) => {
   } else {
     setData(newArray);
     setScore(score);
+    handleHighScore(score, setHighScore);
   }
 }
 
-export const swipeRight = (data, setData, score, setScore, dummy) => {
+export const swipeRight = (data, setData, score, setScore, setHighScore, dummy) => {
   let oldData = data;
   let newArray = cloneDeep(data);
 
@@ -95,10 +96,11 @@ export const swipeRight = (data, setData, score, setScore, dummy) => {
   } else {
     setData(newArray);
     setScore(score);
+    handleHighScore(score, setHighScore);
   }
 }
 
-export const swipeUp = (data, setData, score, setScore, dummy) => {
+export const swipeUp = (data, setData, score, setScore, setHighScore, dummy) => {
   let b = [...data];
   let oldData = JSON.parse(JSON.stringify(data));
   for (let i = 0; i < 4; i++) {
@@ -141,10 +143,11 @@ export const swipeUp = (data, setData, score, setScore, dummy) => {
   } else {
     setData(b);
     setScore(score);
+    handleHighScore(score, setHighScore);
   }
 }
 
-export const swipeDown = (data, setData, score, setScore, dummy) => {
+export const swipeDown = (data, setData, score, setScore, setHighScore, dummy) => {
   console.log(data);
   let b = [...data];
   let oldData = JSON.parse(JSON.stringify(data));
@@ -189,5 +192,6 @@ export const swipeDown = (data, setData, score, setScore, dummy) => {
   } else {
     setData(b);
     setScore(score);
+    handleHighScore(score, setHighScore);
   }
 }
