@@ -26,22 +26,28 @@
 }
 
 html,
+body,
+#root {
+  height: 100%;
+}
+
+html,
 body {
   overscroll-behavior: none;
 }
 
 .app {
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
   width: 100%;
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
   background: radial-gradient(circle at top, var(--color-bg-start), var(--color-bg-end));
   color: var(--color-text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .app *,
@@ -52,11 +58,13 @@ body {
 
 .app__container {
   width: 100%;
-  max-width: 440px;
+  max-width: 480px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 16px;
+  gap: 8px;
+  min-height: 0;
 }
 
 .header {
@@ -64,12 +72,13 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex: 0 0 auto;
 }
 
 .title {
   font-family: 'Monument', sans-serif;
   font-weight: 700;
-  font-size: clamp(40px, 12vw, 56px);
+  font-size: clamp(24px, 8vw, 48px);
   margin: 0;
   color: var(--color-accent);
   text-shadow: 0 0 18px rgba(5, 217, 232, 0.45);
@@ -85,14 +94,14 @@ body {
   background: var(--color-board);
   border: 1px solid rgba(5, 217, 232, 0.25);
   border-radius: 8px;
-  padding: 6px 14px;
-  min-width: 72px;
+  padding: 5px 12px;
+  min-width: 64px;
   text-align: center;
 }
 
 .score-box__label {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--color-text-muted);
@@ -100,7 +109,7 @@ body {
 
 .score-box__value {
   display: block;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--color-accent);
   font-variant-numeric: tabular-nums;
@@ -111,12 +120,12 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
+  flex: 0 0 auto;
 }
 
 .instructions {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-text-muted);
 }
 
@@ -132,11 +141,12 @@ body {
   color: #0c0616;
   border: none;
   border-radius: 8px;
-  padding: 12px 18px;
-  font-size: 14px;
+  padding: 10px 16px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   touch-action: manipulation;
+  white-space: nowrap;
   transition: transform 0.15s ease, background 0.15s ease;
 }
 
@@ -149,6 +159,19 @@ body {
   transform: translateY(0) scale(0.97);
 }
 
+/* This is the element that actually determines how big the board gets: it
+   takes all the vertical space left over after the header/toolbar/footer,
+   and App.js measures it (useMaxSquareSize) to size the board as the
+   largest square that fits — on any screen, in any orientation. */
+.board-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* --- Board ---------------------------------------------------------- */
 /* The board has two stacked layers of the same size and padding: a static
    grid of empty-cell backgrounds, and a layer of tiles positioned with
@@ -158,7 +181,10 @@ body {
 
 .board {
   position: relative;
-  aspect-ratio: 1 / 1;
+  width: 100%;
+  aspect-ratio: 1 / 1; /* fallback for the instant before JS measures it */
+  max-width: 100%;
+  max-height: 100%;
   background: var(--color-board);
   border-radius: 12px;
   touch-action: none;
@@ -316,9 +342,10 @@ body {
 }
 
 .footer {
+  flex: 0 0 auto;
   text-align: center;
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .footer__link {
@@ -334,5 +361,71 @@ body {
   :root {
     --board-padding: 8px;
     --tile-gap: 5px;
+  }
+}
+
+/* --- Desktop / tablet ------------------------------------------------ */
+/* Below this breakpoint we use a compact, full-height, edge-to-edge layout
+   so the board dominates a phone screen. Above it, there's plenty of room
+   in both directions, so this restores the original look: a comfortable
+   centered card with its own natural height, rather than something
+   stretched to fill the whole browser window. */
+@media (min-width: 560px) {
+  .app {
+    height: auto;
+    min-height: 100vh;
+    align-items: center;
+    padding: 32px 24px;
+    overflow: visible;
+  }
+
+  .app__container {
+    height: auto;
+    gap: 16px;
+  }
+
+  .header {
+    gap: 16px;
+  }
+
+  .title {
+    font-size: clamp(40px, 6vw, 56px);
+  }
+
+  .new-game-button {
+    padding: 12px 18px;
+    font-size: 14px;
+  }
+
+  .board-wrap {
+    flex: none;
+  }
+
+  .footer {
+    font-size: 13px;
+  }
+}
+
+/* On short viewports (small phones, or a phone in landscape) the header +
+   toolbar + footer can eat into the board's space more than they should.
+   Trim what we can so the board stays the star of the screen. */
+@media (max-height: 620px) {
+  .app {
+    padding-top: 8px;
+  }
+  .app__container {
+    gap: 6px;
+  }
+  .toolbar {
+    justify-content: flex-end;
+  }
+  .instructions {
+    display: none;
+  }
+}
+
+@media (max-height: 480px) {
+  .footer {
+    display: none;
   }
 }
