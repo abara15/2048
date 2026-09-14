@@ -1,310 +1,218 @@
 import './App.css';
-import { useEffect, useState } from 'react';
-import cloneDeep from 'lodash.clonedeep';
-import GlitchText from 'react-glitch-effect/core/GlitchText';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRedo, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
-import Popup from 'reactjs-popup';
-import 'reactjs-popup/dist/index.css';
-import { useEvent, addNumber, getColors, checkGameOver, handleHighScore, CURRENT_HIGH_SCORE } from './util';
-import { swipeDown, swipeLeft, swipeRight, swipeUp } from './movements';
-import background from "./img/3160.jpg"
+import { faRedo } from '@fortawesome/free-solid-svg-icons';
+import {
+  DIRECTIONS,
+  addRandomTile,
+  canMove,
+  createInitialGrid,
+  getTileColors,
+  hasWon,
+  move,
+  readHighScore,
+  writeHighScore,
+} from './gameLogic';
+
+const KEY_TO_DIRECTION = {
+  ArrowUp: DIRECTIONS.UP,
+  ArrowDown: DIRECTIONS.DOWN,
+  ArrowLeft: DIRECTIONS.LEFT,
+  ArrowRight: DIRECTIONS.RIGHT,
+  w: DIRECTIONS.UP,
+  s: DIRECTIONS.DOWN,
+  a: DIRECTIONS.LEFT,
+  d: DIRECTIONS.RIGHT,
+};
+
+// Minimum distance (px) a touch has to travel before it counts as a swipe.
+const SWIPE_THRESHOLD = 30;
 
 function App() {
-
-  // Key codes for arrows pressed
-  const UP_ARROW = 38;
-  const DOWN_ARROW = 40;
-  const LEFT_ARROW = 37;
-  const RIGHT_ARROW = 39;
-
-	const [data, setData] = useState([
-		[0, 0, 0, 0],
-		[0, 0, 0, 0],
-		[0, 0, 0, 0],
-		[0, 0, 0, 0],
-	]);
-
-  const [gameOver, setGameOver] = useState(false);
+  const [grid, setGrid] = useState(createInitialGrid);
   const [score, setScore] = useState(0);
-  
-  const [highScore, setHighScore] = useState(CURRENT_HIGH_SCORE);
-  
+  const [highScore, setHighScore] = useState(readHighScore);
+  const [status, setStatus] = useState('playing'); // 'playing' | 'won' | 'over'
+  const [keepPlaying, setKeepPlaying] = useState(false);
 
-  // Reset
-  const resetGame = () => {
-    // Create a new grid filled with our initial 0s
-    const initialGrid = [
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-    ];
+  // A ref mirror of state so the keydown/touch listeners can always read the
+  // latest values without needing to be torn down and re-attached on every
+  // render (and without going stale, which was the source of the old
+  // "game over fires on the wrong board" bug).
+  const stateRef = useRef();
+  stateRef.current = { grid, score, status, keepPlaying };
 
-    // Add either a 2 or a 4 to the grid, twice
-    addNumber(initialGrid);
-    addNumber(initialGrid);
+  const applyMove = useCallback((direction) => {
+    const { grid: currentGrid, score: currentScore, status: currentStatus, keepPlaying: currentKeepPlaying } = stateRef.current;
 
-    // Set our data as our new grid with the inserted numbers
-    setData(initialGrid);
-
-    // Our game isn't over anymore, so set gameOver to false
-    setGameOver(false);
-    setScore(0);
-  }
-  
-
-  // Handle key presses
-  const handleKeyDown = (event) => {
-    // Doesn't allow key presses if our gameOver status is true
-    if (gameOver) {
+    if (currentStatus === 'over' || (currentStatus === 'won' && !currentKeepPlaying)) {
       return;
     }
 
-    // Will swipe the grid up/down/left/right depending on key pressed
-    switch (event.keyCode) {
-      case UP_ARROW:
-        swipeUp(data, setData, score, setScore, setHighScore);
-        break;
-
-      case DOWN_ARROW:
-        swipeDown(data, setData, score, setScore, setHighScore);
-        break;
-
-      case LEFT_ARROW:
-        swipeLeft(data, setData, score, setScore, setHighScore);
-        break;
-
-      case RIGHT_ARROW:
-        swipeRight(data, setData, score, setScore, setHighScore);
-        break;
-
-      default:
-        break;
+    const { grid: slidGrid, gained, moved } = move(currentGrid, direction);
+    if (!moved) {
+      return;
     }
 
-    handleHighScore(score, setHighScore);
+    const nextGrid = addRandomTile(slidGrid);
+    const nextScore = currentScore + gained;
 
-    // Check if game is over
-    let gameStatus = checkGameOver(data, setData, score, setScore, setHighScore);
-    if (gameStatus) {
-      // Status is true, so give an alert, set gameOver status as true, and reset game
-      alert("Game over");
-      setGameOver(true);
-      resetGame();
+    setGrid(nextGrid);
+    setScore(nextScore);
+    setHighScore((prevHigh) => {
+      if (nextScore > prevHigh) {
+        writeHighScore(nextScore);
+        return nextScore;
+      }
+      return prevHigh;
+    });
+
+    if (hasWon(nextGrid) && !currentKeepPlaying) {
+      setStatus('won');
+    } else if (!canMove(nextGrid)) {
+      setStatus('over');
+    } else {
+      setStatus('playing');
     }
-  }
-
-
-  // Initializes our starting board
-  useEffect(() => {
-    // Clones our const data set
-    let newGrid = cloneDeep(data);
-    console.log(newGrid);
-
-    // Add either a 2 or a 4 to the grid, twice
-    addNumber(newGrid);
-    console.table(newGrid);
-    addNumber(newGrid);
-    console.table(newGrid);
-
-    // Set our data as our new grid with the inserted numbers
-    setData(newGrid);
   }, []);
 
+  const startNewGame = useCallback(() => {
+    setGrid(createInitialGrid());
+    setScore(0);
+    setStatus('playing');
+    setKeepPlaying(false);
+  }, []);
 
-  // Calls the handleKeyDown function whenever a keydown event occurs
-  useEvent('keydown', handleKeyDown);
+  // Keyboard controls.
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      const direction = KEY_TO_DIRECTION[event.key];
+      if (!direction) {
+        return;
+      }
+      event.preventDefault();
+      applyMove(direction);
+    };
 
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [applyMove]);
 
-	return (
-    <div style={style.body}>
-      <GlitchText
-        style={style.title}
-        disabled={false} 
-        color1='rgba(5, 217, 232, 1)'
-        color2='rgba(255, 42, 109, 1)'
-        iterationCount='infinite'
-        onHover={false}
-      >
-        2048
-      </GlitchText>
+  // Touch / swipe controls for mobile.
+  const touchStartRef = useRef(null);
 
-      <div style={style.flexContainer}>
-        <div style={style.scoreContainer}>
-          <div style={style.scoreItem}>
-            <span>Score</span>
-            <span style={style.score}>{score}</span>
+  const handleTouchStart = (event) => {
+    const touch = event.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (event) => {
+    if (!touchStartRef.current) {
+      return;
+    }
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - touchStartRef.current.x;
+    const deltaY = touch.clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+
+    if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < SWIPE_THRESHOLD) {
+      return;
+    }
+
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      applyMove(deltaX > 0 ? DIRECTIONS.RIGHT : DIRECTIONS.LEFT);
+    } else {
+      applyMove(deltaY > 0 ? DIRECTIONS.DOWN : DIRECTIONS.UP);
+    }
+  };
+
+  const isOverlayVisible = status === 'over' || (status === 'won' && !keepPlaying);
+
+  return (
+    <div className="app">
+      <div className="app__container">
+        <header className="header">
+          <h1 className="title">2048</h1>
+          <div className="scoreboard">
+            <div className="score-box">
+              <span className="score-box__label">Score</span>
+              <span className="score-box__value">{score}</span>
+            </div>
+            <div className="score-box">
+              <span className="score-box__label">Best</span>
+              <span className="score-box__value">{highScore}</span>
+            </div>
           </div>
-          <div style={style.scoreItem}>
-            <span>Best</span>
-            <span style={style.score}>{highScore}</span>
-          </div>
+        </header>
+
+        <div className="toolbar">
+          <p className="instructions">Join the tiles, get to <strong>2048!</strong></p>
+          <button type="button" className="new-game-button" onClick={startNewGame}>
+            <FontAwesomeIcon icon={faRedo} />
+            New Game
+          </button>
         </div>
-        <div style={style.main}>
-          {data.map((row, index) => {
-            return (
-              <div style={{ display: 'flex' }} key={index}>
-                {row.map((digit, i) => (
-                  <Block number={digit} key={i} />
-                ))}
-              </div>
-            );
-          })}
-        </div>
-        {gameOver}
+
         <div
-          onClick={resetGame}
-          style={style.button}
+          className="board"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
-          <FontAwesomeIcon icon={faRedo}  />
-        </div>
-      </div>
-      <div style={style.footer}>
-        <p
-          style={{
-            fontSize: 20,
-            fontFamily: 'Monument'
-          }}
-        >
-          Made by <a 
-          href="https://abara15.github.io" 
-          style={{
-            color: "#05D9E8",
-            textDecoration: 'none',
-          }}
-          >
-            Anthony Barakat
-          </a>
-        </p>
-        <Popup trigger={<FontAwesomeIcon icon={faInfoCircle}  />} position="right center">
-          <a
-            href="https://www.freepik.com/vectors/business"
-            style={{
-              fontSize: 12,
-            }}
-          >
-            Business vector created by vectorpocket - www.freepik.com
-          </a>
-        </Popup>
-      </div>
-    </div>
-	);
-}
+          {isOverlayVisible && (
+            <div className="board-overlay">
+              <p className="board-overlay__message">
+                {status === 'won' ? 'You win!' : 'Game over'}
+              </p>
+              <div className="board-overlay__actions">
+                {status === 'won' && (
+                  <button
+                    type="button"
+                    className="board-overlay__button board-overlay__button--secondary"
+                    onClick={() => setKeepPlaying(true)}
+                  >
+                    Keep going
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="board-overlay__button"
+                  onClick={startNewGame}
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          )}
 
-const Block = ({number}) => {
-  const blockStyle = style.block;
-	return (
-    <div
-      style={{
-        ...blockStyle,
-        background: getColors(number),
-        // color: number === 2 || number === 4 ? "white" : "white",
-      }}
-    >
-      {number !== 0 ? number : ""}
+          {grid.map((row, rowIndex) => (
+            <div className="board__row" key={rowIndex}>
+              {row.map((value, colIndex) => (
+                <Tile value={value} key={colIndex} />
+              ))}
+            </div>
+          ))}
+        </div>
+
+        <footer className="footer">
+          <p>
+            Made by{' '}
+            <a href="https://abara15.github.io" className="footer__link">
+              Anthony Barakat
+            </a>
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }
 
-const style = {
-  body: {
-    backgroundImage: `url(${background})`,
-    backgroundPosition: "center center",
-    backgroundSize: "cover",
-    backgroundRepeat: "no-repeat",
-    backgroundAttachment: "fixed",
-    position: "fixed",
-    padding: 0,
-    margin: 0,
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    userSelect: "none",
-  },
-  title: {
-    fontFamily: 'Monument',
-    fontSize: 150,
-    color: 'white',
-    padding: '30px 0px',
-    textAlign: 'center',
-  },
-  flexContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-  },
-  scoreContainer: {
-    display: 'flex',
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  scoreItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    backgroundColor: '#05D9E8',
-    fontFamily: 'Monument',
-    fontSize: 12,
-    color: '#111111',
-    margin: 10,
-    padding: '10px 50px',
-    borderRadius: 5,
-    textTransform: 'uppercase',
-    textAlign: 'center',
-  },
-  score: {
-    fontFamily: 'Monument',
-    fontSize: 30,
-  },
-  main: {
-    background: "#05D9E8",
-    width: "max-content",
-    margin: "auto",
-    padding: 5,
-    borderRadius: 5,
-    marginTop: 10,
-  },
-  block: {
-    height: "2.5em",
-    width: "2.5em",
-    background: "#321450",
-    margin: 3,
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    fontFamily: "Monument",
-    fontSize: 30,
-    fontWeight: 500,
-    color: "white",
-    transition: "0.3s",
-  },
-  button: {
-    cursor: "pointer",
-    backgroundColor: '#05D9E8',
-    width: "max-content",
-    fontSize: 30,
-    margin: "auto",
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 20,
-  },
-  buttonHover: {
-    color: 'red,'
-  },
-  footer: {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-    position: 'fixed',
-    bottom: 0,
-    left: 0,
-    textAlign: 'center',
-    color: 'white',
-  },
-}
+const Tile = ({ value }) => {
+  const { background, color } = getTileColors(value);
+  return (
+    <div className="tile" style={{ background: value ? background : undefined, color }}>
+      {value !== 0 ? value : ''}
+    </div>
+  );
+};
 
 export default App;

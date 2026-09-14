@@ -1,43 +1,252 @@
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+@font-face {
+  font-family: 'Monument';
+  src: url('./fonts/Momument/MonumentExtended-Ultrabold.otf') format('opentype');
+  font-weight: 700;
 }
 
 @font-face {
   font-family: 'Monument';
-  src: local('Monument'), url(./fonts/Momument/MonumentExtended-Regular.otf) format('truetype');
+  src: url('./fonts/Momument/MonumentExtended-Regular.otf') format('opentype');
+  font-weight: 400;
+}
+
+:root {
+  --color-bg-start: #1b1035;
+  --color-bg-end: #0c0616;
+  --color-accent: #05d9e8;
+  --color-accent-dark: #04a7b3;
+  --color-board: #241a3f;
+  --color-cell-empty: rgba(255, 255, 255, 0.06);
+  --color-text: #f4f2fb;
+  --color-text-muted: rgba(244, 242, 251, 0.65);
+  --board-gap: 12px;
+  --tile-radius: 8px;
+}
+
+.app {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background: radial-gradient(circle at top, var(--color-bg-start), var(--color-bg-end));
+  color: var(--color-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+.app *,
+.app *::before,
+.app *::after {
+  box-sizing: border-box;
+}
+
+.app__container {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  font-family: 'Monument', sans-serif;
+  font-weight: 700;
+  font-size: clamp(40px, 12vw, 56px);
+  margin: 0;
+  color: var(--color-accent);
+  text-shadow: 0 0 18px rgba(5, 217, 232, 0.45);
+  letter-spacing: 1px;
+}
+
+.scoreboard {
+  display: flex;
+  gap: 8px;
+}
+
+.score-box {
+  background: var(--color-board);
+  border: 1px solid rgba(5, 217, 232, 0.25);
+  border-radius: 8px;
+  padding: 6px 14px;
+  min-width: 72px;
+  text-align: center;
+}
+
+.score-box__label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-text-muted);
+}
+
+.score-box__value {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.instructions {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.instructions strong {
+  color: var(--color-text);
+}
+
+.new-game-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-accent);
+  color: #0c0616;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.new-game-button:hover {
+  background: var(--color-accent-dark);
+  transform: translateY(-1px);
+}
+
+.new-game-button:active {
+  transform: translateY(0);
+}
+
+.board {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--board-gap);
+  background: var(--color-board);
+  border-radius: 12px;
+  padding: var(--board-gap);
+  touch-action: none;
+  user-select: none;
+}
+
+.board__row {
+  display: flex;
+  gap: var(--board-gap);
+}
+
+.tile {
+  flex: 1;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--tile-radius);
+  background: var(--color-cell-empty);
+  font-family: 'Monument', sans-serif;
+  font-weight: 700;
+  font-size: clamp(18px, 6vw, 32px);
+  transition: background 0.15s ease, color 0.15s ease;
+  animation: tile-pop 0.15s ease;
+}
+
+@keyframes tile-pop {
+  from {
+    transform: scale(0.8);
+    opacity: 0.4;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.board-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(12, 6, 22, 0.85);
+  border-radius: 12px;
+  backdrop-filter: blur(2px);
+  animation: overlay-fade-in 0.2s ease;
+}
+
+@keyframes overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.board-overlay__message {
+  margin: 0;
+  font-family: 'Monument', sans-serif;
+  font-size: 30px;
+  color: var(--color-accent);
+}
+
+.board-overlay__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.board-overlay__button {
+  background: var(--color-accent);
+  color: #0c0616;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.board-overlay__button--secondary {
+  background: transparent;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+}
+
+.footer {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.footer__link {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.footer__link:hover {
+  text-decoration: underline;
 }
