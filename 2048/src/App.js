@@ -30,6 +30,49 @@ const SLIDE_DURATION_MS = 120;
 // Minimum distance (px) a touch has to travel before it counts as a swipe.
 const SWIPE_THRESHOLD = 24;
 
+// Measures `ref`'s container and returns the size (in px) of the largest
+// square that fits inside it. Used to make the board fill whatever space is
+// actually left after the header/toolbar/footer, on any screen size or
+// orientation — a plain CSS aspect-ratio can't do this because it only ever
+// resolves from a single definite axis, not "fit both".
+const useMaxSquareSize = (ref) => {
+  const [size, setSize] = useState(0);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return undefined;
+    }
+
+    const updateSize = () => {
+      const { clientWidth, clientHeight } = el;
+      setSize(Math.max(0, Math.min(clientWidth, clientHeight)));
+    };
+
+    updateSize();
+
+    let observer;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(updateSize);
+      observer.observe(el);
+    } else {
+      window.addEventListener('resize', updateSize);
+    }
+    window.addEventListener('orientationchange', updateSize);
+
+    return () => {
+      if (observer) {
+        observer.disconnect();
+      } else {
+        window.removeEventListener('resize', updateSize);
+      }
+      window.removeEventListener('orientationchange', updateSize);
+    };
+  }, [ref]);
+
+  return size;
+};
+
 function App() {
   const [tiles, setTiles] = useState(createInitialTiles);
   const [score, setScore] = useState(0);
@@ -123,6 +166,9 @@ function App() {
   // Touch / swipe controls for mobile.
   const touchStartRef = useRef(null);
 
+  const boardWrapRef = useRef(null);
+  const boardSize = useMaxSquareSize(boardWrapRef);
+
   const handleTouchStart = (event) => {
     const touch = event.touches[0];
     touchStartRef.current = { x: touch.clientX, y: touch.clientY };
@@ -183,48 +229,51 @@ function App() {
           </button>
         </div>
 
-        <div
-          className="board"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          {isOverlayVisible && (
-            <div className="board-overlay">
-              <p className="board-overlay__message">
-                {status === 'won' ? 'You win!' : 'Game over'}
-              </p>
-              <div className="board-overlay__actions">
-                {status === 'won' && (
+        <div className="board-wrap" ref={boardWrapRef}>
+          <div
+            className="board"
+            style={boardSize ? { width: boardSize, height: boardSize } : undefined}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {isOverlayVisible && (
+              <div className="board-overlay">
+                <p className="board-overlay__message">
+                  {status === 'won' ? 'You win!' : 'Game over'}
+                </p>
+                <div className="board-overlay__actions">
+                  {status === 'won' && (
+                    <button
+                      type="button"
+                      className="board-overlay__button board-overlay__button--secondary"
+                      onClick={() => setKeepPlaying(true)}
+                    >
+                      Keep going
+                    </button>
+                  )}
                   <button
                     type="button"
-                    className="board-overlay__button board-overlay__button--secondary"
-                    onClick={() => setKeepPlaying(true)}
+                    className="board-overlay__button"
+                    onClick={startNewGame}
                   >
-                    Keep going
+                    Try again
                   </button>
-                )}
-                <button
-                  type="button"
-                  className="board-overlay__button"
-                  onClick={startNewGame}
-                >
-                  Try again
-                </button>
+                </div>
               </div>
+            )}
+
+            <div className="board__cells">
+              {Array.from({ length: 16 }).map((_, index) => (
+                <div className="board__cell" key={index} />
+              ))}
             </div>
-          )}
 
-          <div className="board__cells">
-            {Array.from({ length: 16 }).map((_, index) => (
-              <div className="board__cell" key={index} />
-            ))}
-          </div>
-
-          <div className="board__tiles">
-            {tiles.map((tile) => (
-              <Tile key={tile.id} tile={tile} />
-            ))}
+            <div className="board__tiles">
+              {tiles.map((tile) => (
+                <Tile key={tile.id} tile={tile} />
+              ))}
+            </div>
           </div>
         </div>
 
