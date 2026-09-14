@@ -28,11 +28,16 @@ npm test
 ## Project structure
 
 - `src/gameLogic.js` — the game rules: sliding/merging tiles, spawning new
-  tiles, detecting a win/game-over. Pure functions with no React or DOM
-  dependencies, so they're straightforward to unit test.
-- `src/App.js` — the UI: renders the board, wires up keyboard and touch
-  controls, and shows the win/game-over overlay.
-- `src/App.css` — all styling and animations.
+  tiles, detecting a win/game-over. Tiles are tracked as individual objects
+  with a stable `id` and a `{row, col}` position (not just values in a grid),
+  which is what lets the UI animate a tile actually *sliding* to its new
+  spot instead of just redrawing values in place. Pure functions with no
+  React or DOM dependencies, so they're straightforward to unit test.
+- `src/App.js` — the UI: renders the board in two phases per move (slide,
+  then settle/spawn) so the CSS transition has something to animate, and
+  wires up keyboard and touch controls (with `touchmove` blocked on the
+  board so swiping doesn't drag the page on mobile).
+- `src/App.css` — styling, layout, and the tile slide/merge/spawn animations.
 
 ## Notes on this version
 

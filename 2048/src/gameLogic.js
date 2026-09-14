@@ -1,10 +1,13 @@
 // Core 2048 game logic.
 //
-// Every function here is pure: it takes a grid (and maybe a direction) and
-// returns a *new* grid/result rather than mutating its arguments. Keeping
-// this layer side-effect free makes the rules easy to test and makes the
-// React layer (App.js) trivial to reason about, since a single move can be
-// computed and applied in one synchronous step.
+// Tiles are tracked as individual objects with a stable `id`, rather than as
+// plain numbers in a grid. That's what lets the UI animate a tile *sliding*
+// from its old position to its new one instead of just redrawing values in
+// place: React can match up DOM nodes by `id` across a move and transition
+// their position.
+//
+// Every function here is pure: it takes tiles (and maybe a direction) and
+// returns *new* data rather than mutating its arguments.
 
 export const GRID_SIZE = 4;
 export const WINNING_VALUE = 2048;
@@ -17,23 +20,18 @@ export const DIRECTIONS = {
   RIGHT: 'RIGHT',
 };
 
-// Creates a fresh GRID_SIZE x GRID_SIZE grid filled with zeros.
-export const createEmptyGrid = () =>
-  Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(0));
+let nextTileId = 1;
+const createTileId = () => `tile-${nextTileId++}`;
 
-// Returns a brand new grid with two starting tiles placed on it.
-export const createInitialGrid = () => {
-  let grid = createEmptyGrid();
-  grid = addRandomTile(grid);
-  grid = addRandomTile(grid);
-  return grid;
-};
+// A tile is { id, row, col, value }.
 
-const getEmptyCells = (grid) => {
+const isOccupied = (tiles, row, col) => tiles.some((tile) => tile.row === row && tile.col === col);
+
+const getEmptyCells = (tiles) => {
   const cells = [];
   for (let row = 0; row < GRID_SIZE; row++) {
     for (let col = 0; col < GRID_SIZE; col++) {
-      if (grid[row][col] === 0) {
+      if (!isOccupied(tiles, row, col)) {
         cells.push([row, col]);
       }
     }
@@ -41,110 +39,138 @@ const getEmptyCells = (grid) => {
   return cells;
 };
 
-// Returns a new grid with a single 2 (90%) or 4 (10%) tile placed in a
-// random empty cell. If the grid is already full, the same grid is
-// returned unchanged instead of looping forever looking for a free cell.
-export const addRandomTile = (grid) => {
-  const emptyCells = getEmptyCells(grid);
+// Returns a new tiles array with a single 2 (90%) or 4 (10%) tile added in a
+// random empty cell. If the board is already full, the same array is
+// returned unchanged (this used to be an infinite loop bug).
+export const addRandomTile = (tiles) => {
+  const emptyCells = getEmptyCells(tiles);
   if (emptyCells.length === 0) {
-    return grid;
+    return tiles;
   }
 
   const [row, col] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
-  const next = grid.map((r) => [...r]);
-  next[row][col] = Math.random() < 0.9 ? 2 : 4;
-  return next;
+  const value = Math.random() < 0.9 ? 2 : 4;
+  return [...tiles, { id: createTileId(), row, col, value, isNew: true }];
 };
 
-// Slides and merges a single row to the left, e.g. [2,2,4,0] -> [4,4,0,0].
-// Returns the resulting row plus the score gained from any merges.
-const slideRowLeft = (row) => {
-  const values = row.filter((value) => value !== 0);
-  let gained = 0;
+export const createInitialTiles = () => addRandomTile(addRandomTile([]));
 
-  for (let i = 0; i < values.length - 1; i++) {
-    if (values[i] !== 0 && values[i] === values[i + 1]) {
-      values[i] *= 2;
-      gained += values[i];
-      values[i + 1] = 0;
+// Collapses a single line of tiles (already ordered nearest-wall-first).
+// Returns the settled line plus a map of original tile id -> its index in
+// the settled line (both tiles in a merge land on the same index, which is
+// where the merged tile ends up).
+const collapseLine = (line) => {
+  const settled = [];
+  const landingIndexById = {};
+  let scoreGained = 0;
+
+  let i = 0;
+  while (i < line.length) {
+    const current = line[i];
+    const next = line[i + 1];
+
+    if (next && next.value === current.value) {
+      const mergedValue = current.value * 2;
+      const mergedId = createTileId();
+      landingIndexById[current.id] = settled.length;
+      landingIndexById[next.id] = settled.length;
+      settled.push({ id: mergedId, value: mergedValue, mergedFrom: [current.id, next.id] });
+      scoreGained += mergedValue;
+      i += 2;
+    } else {
+      landingIndexById[current.id] = settled.length;
+      settled.push({ id: current.id, value: current.value });
+      i += 1;
     }
   }
 
-  const merged = values.filter((value) => value !== 0);
-  while (merged.length < GRID_SIZE) {
-    merged.push(0);
-  }
-
-  return { row: merged, gained };
+  return { settled, landingIndexById, scoreGained };
 };
 
-const reverse = (row) => [...row].reverse();
+const LINE_CONFIG = {
+  [DIRECTIONS.LEFT]: { axis: 'row', reverse: false },
+  [DIRECTIONS.RIGHT]: { axis: 'row', reverse: true },
+  [DIRECTIONS.UP]: { axis: 'col', reverse: false },
+  [DIRECTIONS.DOWN]: { axis: 'col', reverse: true },
+};
 
-const transpose = (grid) =>
-  grid[0].map((_, colIndex) => grid.map((row) => row[colIndex]));
+// Applies a move in the given direction. Nothing here mutates the input.
+// Returns:
+//   slidTiles    - original tiles (same ids/values), moved to the position
+//                  they slide to. Tiles that are about to merge land on the
+//                  same cell as their partner. Render this first so the UI
+//                  can transition tiles' positions.
+//   settledTiles - the resulting tiles once merges are resolved (fewer
+//                  tiles than slidTiles if any merges happened; merged
+//                  tiles get a brand new id so the UI can "pop" them in).
+//                  No new random tile has been added yet.
+//   scoreGained  - points earned from merges this move.
+//   moved        - whether anything on the board actually changed.
+export const move = (tiles, direction) => {
+  const { axis, reverse } = LINE_CONFIG[direction];
+  const slidPositionById = {};
+  const settledTiles = [];
+  let scoreGained = 0;
 
-// Applies a move in the given direction to the grid. Nothing here mutates
-// the input grid. Returns:
-//   grid   - the resulting grid after sliding/merging (no new tile added)
-//   gained - the score earned from merges this move
-//   moved  - whether anything on the board actually changed
-export const move = (grid, direction) => {
-  let workingGrid;
-  let needsTranspose = false;
-  let needsReverse = false;
+  for (let lineIndex = 0; lineIndex < GRID_SIZE; lineIndex++) {
+    const lineTiles = tiles
+      .filter((tile) => (axis === 'row' ? tile.row === lineIndex : tile.col === lineIndex))
+      .sort((a, b) => {
+        const posA = axis === 'row' ? a.col : a.row;
+        const posB = axis === 'row' ? b.col : b.row;
+        return reverse ? posB - posA : posA - posB;
+      });
 
-  switch (direction) {
-    case DIRECTIONS.LEFT:
-      workingGrid = grid;
-      break;
-    case DIRECTIONS.RIGHT:
-      workingGrid = grid.map(reverse);
-      needsReverse = true;
-      break;
-    case DIRECTIONS.UP:
-      workingGrid = transpose(grid);
-      needsTranspose = true;
-      break;
-    case DIRECTIONS.DOWN:
-      workingGrid = transpose(grid).map(reverse);
-      needsTranspose = true;
-      needsReverse = true;
-      break;
-    default:
-      workingGrid = grid;
+    const { settled, landingIndexById, scoreGained: lineScore } = collapseLine(lineTiles);
+    scoreGained += lineScore;
+
+    const indexToPosition = (index) => (reverse ? GRID_SIZE - 1 - index : index);
+
+    lineTiles.forEach((tile) => {
+      const landingIndex = landingIndexById[tile.id];
+      const position = indexToPosition(landingIndex);
+      slidPositionById[tile.id] = axis === 'row' ? { row: lineIndex, col: position } : { row: position, col: lineIndex };
+    });
+
+    settled.forEach((entry, index) => {
+      const position = indexToPosition(index);
+      settledTiles.push({
+        id: entry.id,
+        value: entry.value,
+        mergedFrom: entry.mergedFrom,
+        row: axis === 'row' ? lineIndex : position,
+        col: axis === 'row' ? position : lineIndex,
+      });
+    });
   }
 
-  let gained = 0;
-  let resultGrid = workingGrid.map((row) => {
-    const { row: slidRow, gained: rowGained } = slideRowLeft(row);
-    gained += rowGained;
-    return slidRow;
+  const slidTiles = tiles.map((tile) => ({ ...tile, ...slidPositionById[tile.id], isNew: false }));
+
+  const moved = tiles.some((tile) => {
+    const landing = slidPositionById[tile.id];
+    return landing.row !== tile.row || landing.col !== tile.col;
   });
 
-  if (needsReverse) {
-    resultGrid = resultGrid.map(reverse);
-  }
-  if (needsTranspose) {
-    resultGrid = transpose(resultGrid);
-  }
-
-  const moved = JSON.stringify(grid) !== JSON.stringify(resultGrid);
-
-  return { grid: resultGrid, gained, moved };
+  return { slidTiles, settledTiles, scoreGained, moved };
 };
 
 // True if there is at least one legal move left: an empty cell, or two
 // equal, adjacent tiles (horizontally or vertically) that could merge.
-export const canMove = (grid) => {
-  if (getEmptyCells(grid).length > 0) {
+export const canMove = (tiles) => {
+  if (getEmptyCells(tiles).length > 0) {
     return true;
   }
 
+  const valueAt = {};
+  tiles.forEach((tile) => {
+    valueAt[`${tile.row},${tile.col}`] = tile.value;
+  });
+
   for (let row = 0; row < GRID_SIZE; row++) {
     for (let col = 0; col < GRID_SIZE; col++) {
-      const value = grid[row][col];
-      const right = grid[row][col + 1];
-      const below = grid[row + 1] ? grid[row + 1][col] : undefined;
+      const value = valueAt[`${row},${col}`];
+      const right = valueAt[`${row},${col + 1}`];
+      const below = valueAt[`${row + 1},${col}`];
       if (value === right || value === below) {
         return true;
       }
@@ -155,7 +181,7 @@ export const canMove = (grid) => {
 };
 
 // True once any tile has reached the winning value.
-export const hasWon = (grid) => grid.some((row) => row.some((value) => value >= WINNING_VALUE));
+export const hasWon = (tiles) => tiles.some((tile) => tile.value >= WINNING_VALUE);
 
 export const readHighScore = () => {
   const stored = Number(localStorage.getItem(HIGH_SCORE_KEY));

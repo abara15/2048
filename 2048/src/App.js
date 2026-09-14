@@ -6,7 +6,7 @@ import {
   DIRECTIONS,
   addRandomTile,
   canMove,
-  createInitialGrid,
+  createInitialTiles,
   getTileColors,
   hasWon,
   move,
@@ -25,39 +25,51 @@ const KEY_TO_DIRECTION = {
   d: DIRECTIONS.RIGHT,
 };
 
+// How long the CSS slide transition takes (src/App.css must match this).
+const SLIDE_DURATION_MS = 120;
 // Minimum distance (px) a touch has to travel before it counts as a swipe.
-const SWIPE_THRESHOLD = 30;
+const SWIPE_THRESHOLD = 24;
 
 function App() {
-  const [grid, setGrid] = useState(createInitialGrid);
+  const [tiles, setTiles] = useState(createInitialTiles);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(readHighScore);
   const [status, setStatus] = useState('playing'); // 'playing' | 'won' | 'over'
   const [keepPlaying, setKeepPlaying] = useState(false);
 
-  // A ref mirror of state so the keydown/touch listeners can always read the
-  // latest values without needing to be torn down and re-attached on every
-  // render (and without going stale, which was the source of the old
-  // "game over fires on the wrong board" bug).
+  // A ref mirror of state so the keydown/touch listeners always read the
+  // latest values without needing to be re-attached on every render, and a
+  // flag so a new move can't be started mid-slide (which would scramble the
+  // in-flight animation).
   const stateRef = useRef();
-  stateRef.current = { grid, score, status, keepPlaying };
+  stateRef.current = { tiles, score, status, keepPlaying, isAnimating: false };
+  const isAnimatingRef = useRef(false);
+  const pendingTimeoutRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(pendingTimeoutRef.current), []);
 
   const applyMove = useCallback((direction) => {
-    const { grid: currentGrid, score: currentScore, status: currentStatus, keepPlaying: currentKeepPlaying } = stateRef.current;
+    const { tiles: currentTiles, score: currentScore, status: currentStatus, keepPlaying: currentKeepPlaying } = stateRef.current;
 
+    if (isAnimatingRef.current) {
+      return;
+    }
     if (currentStatus === 'over' || (currentStatus === 'won' && !currentKeepPlaying)) {
       return;
     }
 
-    const { grid: slidGrid, gained, moved } = move(currentGrid, direction);
+    const { slidTiles, settledTiles, scoreGained, moved } = move(currentTiles, direction);
     if (!moved) {
       return;
     }
 
-    const nextGrid = addRandomTile(slidGrid);
-    const nextScore = currentScore + gained;
+    // Phase 1: move existing tiles to their landing spot. Tiles that are
+    // about to merge land on top of each other here — the CSS transition on
+    // each tile's position is what produces the slide.
+    isAnimatingRef.current = true;
+    setTiles(slidTiles);
 
-    setGrid(nextGrid);
+    const nextScore = currentScore + scoreGained;
     setScore(nextScore);
     setHighScore((prevHigh) => {
       if (nextScore > prevHigh) {
@@ -67,17 +79,27 @@ function App() {
       return prevHigh;
     });
 
-    if (hasWon(nextGrid) && !currentKeepPlaying) {
-      setStatus('won');
-    } else if (!canMove(nextGrid)) {
-      setStatus('over');
-    } else {
-      setStatus('playing');
-    }
+    // Phase 2: once the slide finishes, collapse merged pairs into their
+    // combined tile and drop in a new random tile.
+    pendingTimeoutRef.current = setTimeout(() => {
+      const finalTiles = addRandomTile(settledTiles);
+      setTiles(finalTiles);
+      isAnimatingRef.current = false;
+
+      if (hasWon(finalTiles) && !currentKeepPlaying) {
+        setStatus('won');
+      } else if (!canMove(finalTiles)) {
+        setStatus('over');
+      } else {
+        setStatus('playing');
+      }
+    }, SLIDE_DURATION_MS);
   }, []);
 
   const startNewGame = useCallback(() => {
-    setGrid(createInitialGrid());
+    clearTimeout(pendingTimeoutRef.current);
+    isAnimatingRef.current = false;
+    setTiles(createInitialTiles());
     setScore(0);
     setStatus('playing');
     setKeepPlaying(false);
@@ -104,6 +126,14 @@ function App() {
   const handleTouchStart = (event) => {
     const touch = event.touches[0];
     touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  // Block the browser's own scroll/pull-to-refresh gesture as soon as a
+  // swipe starts on the board, so playing on a phone doesn't drag the page.
+  const handleTouchMove = (event) => {
+    if (touchStartRef.current) {
+      event.preventDefault();
+    }
   };
 
   const handleTouchEnd = (event) => {
@@ -156,6 +186,7 @@ function App() {
         <div
           className="board"
           onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
           {isOverlayVisible && (
@@ -184,13 +215,17 @@ function App() {
             </div>
           )}
 
-          {grid.map((row, rowIndex) => (
-            <div className="board__row" key={rowIndex}>
-              {row.map((value, colIndex) => (
-                <Tile value={value} key={colIndex} />
-              ))}
-            </div>
-          ))}
+          <div className="board__cells">
+            {Array.from({ length: 16 }).map((_, index) => (
+              <div className="board__cell" key={index} />
+            ))}
+          </div>
+
+          <div className="board__tiles">
+            {tiles.map((tile) => (
+              <Tile key={tile.id} tile={tile} />
+            ))}
+          </div>
         </div>
 
         <footer className="footer">
@@ -206,11 +241,23 @@ function App() {
   );
 }
 
-const Tile = ({ value }) => {
-  const { background, color } = getTileColors(value);
+const Tile = ({ tile }) => {
+  const { background, color } = getTileColors(tile.value);
+  const className = ['tile', tile.mergedFrom ? 'tile--merged' : '', tile.isNew ? 'tile--new' : '']
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div className="tile" style={{ background: value ? background : undefined, color }}>
-      {value !== 0 ? value : ''}
+    <div
+      className={className}
+      style={{
+        '--row': tile.row,
+        '--col': tile.col,
+      }}
+    >
+      <div className="tile__inner" style={{ background, color }}>
+        {tile.value}
+      </div>
     </div>
   );
 };
